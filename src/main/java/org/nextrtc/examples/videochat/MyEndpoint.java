@@ -7,7 +7,7 @@ import org.nextrtc.signalingserver.codec.MessageDecoder;
 import org.nextrtc.signalingserver.codec.MessageEncoder;
 
 @ServerEndpoint(value = "/signaling",//
-decoders = MessageDecoder.class,//
-encoders = MessageEncoder.class)
+        decoders = MessageDecoder.class,//
+        encoders = MessageEncoder.class)
 public class MyEndpoint extends NextRTCEndpoint {
 }

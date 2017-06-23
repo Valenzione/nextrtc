@@ -21,51 +21,27 @@
 </div>
 
 <div id="main-content" class="container">
-    <div class="row">
-        <div class="col-md-12 space-bottom10">
-            <form class="form-inline">
-                <div class="form-group">
-                    <label for="from">Name?</label>
-                    <input type="text" id="from" class="form-control"
-                           placeholder="enter your name...">
-                </div>
-                <button id="connect"
-                        class="btn btn-default"
-                        type="submit">Connect
-                </button>
-                <button id="disconnect"
-                        class="btn btn-default"
-                        type="submit"
-                        disabled="disabled">Disconnect
-                </button>
-            </form>
-        </div>
-    </div>
+
     <div class="row space-bottom10">
         <form>
-            <div class="col-md-2">
-                <input name="room"
-                       id="room"
-                       type="text"
-                       class="form-control">
-            </div>
             <div class="col-md-6">
                 <input type="text"
-                       id="text"
+                       id="messageContent"
                        class="form-control"
                        placeholder="enter message ...">
             </div>
             <div class="col-md-4">
                 <button id="send"
                         class="btn btn-default"
-                        type="submit">Send
+                        type="button" onclick="sendMessage()">Send
                 </button>
             </div>
         </form>
     </div>
+
     <div class="row">
         <div class="col-md-12">
-            <table id="conversation" class="table table-striped">
+            <table id="conversation">
                 <thead>
                 <tr>
                     <th width="10%">From</th>
@@ -79,6 +55,7 @@
             </table>
         </div>
     </div>
+
 </div>
 
 <div>
@@ -90,98 +67,13 @@
     <video id="template" width="320" height="240" autoplay controls></video>
 </div>
 
-<script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
-<script src="js/jquery-2.1.3.min.js"></script>
+<script src="jquery-2.1.3.min.js"></script>
 <script src="/webjars/sockjs-client/sockjs.min.js"></script>
 <script src="/webjars/stomp-websocket/stomp.min.js"></script>
-<script src="js/nextRTC.js"></script>
-<script src="js/chat.js"></script>
-<script
-        src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/js/bootstrap.min.js"></script>
-<script>
-    var createConversation = function () {
-        var convId = $('#convId').val();
-        nextRTC.create(convId);
-    };
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/js/bootstrap.min.js"></script>
+<script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
+<script src="nextRTC.js"></script>
+<script src="webrtc.js"></script>
 
-
-    var createBroadcastConversation = function () {
-        var convId = $('#convId').val();
-        nextRTC.create(convId, {type: 'BROADCAST'});
-    };
-
-    var joinConversation = function () {
-        var convId = $('#convId').val();
-        nextRTC.join(convId);
-    };
-
-    var leaveConversation = function () {
-        $('#container').empty();
-        nextRTC.leave();
-    };
-
-    var changeMicrophoneState = function () {
-        var localStream = $("#local")[0];
-        localStream.srcObject.getAudioTracks()[0].enabled = !localStream.srcObject.getAudioTracks()[0].enabled;
-    };
-
-    var nextRTC = new NextRTC({
-        wsURL: 'wss://' + location.hostname + (location.port ? ':' + location.port : '') + '/signaling',
-        mediaConfig: {
-            video: true,
-            audio: true,
-        },
-        peerConfig: {
-            iceServers: [
-                {urls: "stun:23.21.150.121"},
-                {urls: "stun:stun.l.google.com:19302"},
-                {urls: "turn:numb.viagenie.ca", credential: "webrtcdemo", username: "louis@mozilla.com"}
-            ],
-            iceTransportPolicy: 'all',
-            rtcpMuxPolicy: 'negotiate'
-        }
-    });
-
-    nextRTC.on('created', function (nextRTC, event) {
-        console.log(JSON.stringify(event));
-        $('#log').append('<li>Room with id ' + event.content + ' has been created, share it with your friend to start videochat</li>');
-    });
-
-    nextRTC.on('joined', function (nextRTC, event) {
-        console.log(JSON.stringify(event));
-        $('#log').append('<li>You have been joined to conversation ' + event.content + '</li>');
-    });
-
-    nextRTC.on('newJoined', function (nextRTC, event) {
-        console.log(JSON.stringify(event));
-        $('#log').append('<li>Member with id ' + event.from + ' has joined conversation</li>');
-    });
-
-    nextRTC.on('localStream', function (member, stream) {
-        var dest = $("#template").clone().prop({id: 'local'});
-        $("#container").append(dest);
-        dest[0].srcObject = stream.stream;
-        dest[0].muted = true;
-    });
-
-    nextRTC.on('remoteStream', function (member, stream) {
-        var dest = $("#template").clone().prop({id: 'remote'});
-        $("#container").append(dest);
-        dest[0].srcObject = stream.stream;
-    });
-
-    nextRTC.on('left', function (nextRTC, event) {
-        nextRTC.release(event.from);
-        console.log(JSON.stringify(event));
-        $('#remote').remove();
-        $('#log').append('<li>' + event.from + " left!</li>");
-    });
-
-    nextRTC.on('error', function (nextRTC, event) {
-        console.log(JSON.stringify(event));
-        $('#log').append('<li>Something goes wrong! ' + event.content + '</li>')
-    });
-
-</script>
 </body>
 </html>
