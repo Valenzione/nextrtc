@@ -1,6 +1,8 @@
-var companionId = -1;
-var ownId = -1;
-var room = "";
+var companionId;
+var companionUsername;
+var ownId;
+var ownUsername;
+var room;
 
 var createConversation = function () {
     var convId = $('#convId').val();
@@ -15,13 +17,16 @@ var createBroadcastConversation = function () {
 var joinConversation = function () {
     setConnected(true);
     var convId = $('#convId').val();
+    room = convId;
     nextRTC.join(convId);
 };
 
 var leaveConversation = function () {
     setConnected(false);
-    $('#container').empty();
+    // $('#container').empty();
+    room = null;
     nextRTC.leave();
+    $('#messages').empty();
 };
 
 var changeMicrophoneState = function () {
@@ -30,8 +35,6 @@ var changeMicrophoneState = function () {
 };
 
 function setConnected(connected) {
-    $("#send").prop("disabled", !connected);
-    $('#messageContent').prop('disabled', !connected);
     if (connected) {
         $('#messageContent').focus();
     }
@@ -39,12 +42,8 @@ function setConnected(connected) {
 
 var sendMessage = function () {
     var msgContent = $('#messageContent').val();
-    if (companionId !== -1) {
-        nextRTC.message(companionId, msgContent);
-    }
-    if (ownId !== -1) {
-        nextRTC.message(ownId, msgContent);
-    }
+    var msg = {"from": ownUsername, "to": companionUsername, "content": msgContent};
+    nextRTC.message(companionId, JSON.stringify(msg));
 }
 
 var nextRTC = new NextRTC({
@@ -66,6 +65,7 @@ var nextRTC = new NextRTC({
 
 nextRTC.on('created', function (nextRTC, event) {
     ownId = event.to;
+    room = event.content;
     console.log(JSON.stringify(event));
     $('#log').append('<li>Room with id ' + event.content + ' has been created, share it with your friend to start videochat</li>');
 });
@@ -77,32 +77,69 @@ nextRTC.on('joined', function (nextRTC, event) {
     $('#log').append('<li>You have been joined to conversation ' + event.content + '</li>');
 });
 
+nextRTC.on('chatHst', function (nextRTC, event) {
+    $('#send,#messageContent').prop("disabled", false);
+    var messageList = $.parseJSON(event.content)
+    for (var i in messageList) {
+        var message = messageList[i];
+        var color = "97D88A";
+        if (ownUsername !== message.from) {
+            color = "FF674D";
+        }
+        $('#messages').append('<tr bgcolor=' + color + '>' +
+            '<td>' + message.from + '</td>' +
+            '<td>' + message.room + '</td>' +
+            '<td>' + message.content + '</td>' +
+            // '<td>' + message.time + '</td>' +
+            '</tr>');
+    }
+})
+
 nextRTC.on('newJoined', function (nextRTC, event) {
     companionId = event.from;
-    nextRTC.message(event.from, "User succesfully connected to chat!")
-    nextRTC.message(ownId, "User succesfully connected to chat!")
-    console.log(JSON.stringify(event));
+    $.get("/username", function (data) {
+        ownUsername = data;
+        nextRTC.initRequest(companionId, data);// TODO add username by spring server.
+    });
     $('#log').append('<li>Member with id ' + event.from + ' has joined conversation</li>');
+
+});
+
+nextRTC.on('initRequest', function (nextRTC, event) {
+    companionId = event.from;
+    companionUsername = event.content;
+    $.get("/username", function (data) {
+        ownUsername = data;
+        nextRTC.initResponse(companionId, data);// TODO add username by spring server.
+        nextRTC.chatHistory(ownId, ownUsername, companionUsername);
+    });
+    $('#log').append('<li>Member with id ' + event.from + ' has sent his credentials to access chat</li>');
+});
+
+nextRTC.on('initResponse', function (nextRTC, event) {
+    companionId = event.from;
+    companionUsername = event.content;
+    nextRTC.chatHistory(ownId, ownUsername, companionUsername);
+    $('#log').append('<li>Member with id ' + event.from + ' has sent his credentials to access chat</li>');
 });
 
 nextRTC.on('localStream', function (member, stream) {
-    var dest = $("#template").clone().prop({id: 'local'});
-    $("#container").append(dest);
+    var dest = $("#local");
     dest[0].srcObject = stream.stream;
     dest[0].muted = true;
 });
 
 nextRTC.on('remoteStream', function (member, stream) {
-    var dest = $("#template").clone().prop({id: 'remote'});
-    $("#container").append(dest);
+    var dest = $("#remote");
     dest[0].srcObject = stream.stream;
 });
 
 nextRTC.on('left', function (nextRTC, event) {
-    companionId = -1;
+    companionId = null;
     nextRTC.release(event.from);
     console.log(JSON.stringify(event));
-    $('#remote').remove();
+    $('#messages').empty();
+    // $('#remote').remove();
     $('#log').append('<li>' + event.from + " left!</li>");
 });
 
@@ -113,20 +150,18 @@ nextRTC.on('error', function (nextRTC, event) {
 
 nextRTC.on('chatMsg', function (nextRTC, event) {
     var color = "97D88A";
-    if (ownId !== event.from) {
+    var receivedMsg = JSON.parse(event.content);
+    if (ownUsername !== receivedMsg.from) {
         companionId = event.from;
         color = "FF674D";
     }
 
-    var currentdate = new Date();
-
     $('#messages').append('<tr bgcolor=' + color + ' opacity = 0.3>' +
-        '<td>' + event.from + '</td>' +
-        '<td>' + room + '</td>' +
-        '<td>' + event.content + '</td>' +
-        '<td>' + currentdate.getHours() + ":" + currentdate.getMinutes() + ":" + currentdate.getSeconds() + '</td>' +
+        '<td>' + receivedMsg.from + '</td>' +
+        '<td>' + receivedMsg.room + '</td>' +
+        '<td>' + receivedMsg.content + '</td>' +
+        // '<td>' + event.content.time + '</td>' +
         '</tr>');
-
 
     $('#log').append('<li>Recieved message: ' + event.content + '</li>')
 });
