@@ -147,13 +147,26 @@ var NextRTC = function NextRTC(config) {
         });
     };
 
+
     this.candidate = function (nextRTC, signal) {
         var pc = nextRTC.preparePeerConnection(nextRTC, signal.from);
         pc['pc'].addIceCandidate(new RTCIceCandidate(JSON.parse(signal.content.replace(new RegExp('\'', 'g'), '"'))), that.success, that.error);
     }
 
     this.message = function (to, content) {
-        this.request('chatMsg',to,content);
+        this.request('chatMsg', to, content);
+    }
+
+    this.chatHistory = function (to, username1, username2) {
+        this.request('chatHst', to, username1 + ":" + username2);
+    }
+
+    this.initRequest = function (to, username) {
+        this.request('initRequest', to, username);
+    }
+
+    this.initResponse = function (to, username) {
+        this.request('initResponse', to, username);
     }
 
     this.init = function () {
@@ -164,6 +177,9 @@ var NextRTC = function NextRTC(config) {
         this.on('close', this.close);
         this.on('error', this.error);
         this.on('chatMsg', this.message);
+        this.on('initRequest', this.initRequest)
+        this.on('initResponse', this.initResponse)
+        this.on('chatHst', this.chatHistory)
         this.on('ping', function () {
         });
     };
